@@ -1,0 +1,59 @@
+1. List the observations and assumptions you made about the log file (3-5
+sentences)
+
+All patient data is on a single line and not all lines represent a patient.
+The log file has space separated value for any lines that contain patient data.
+I also observed that patients date of birth field can be named DOB or DATE_OF_BIRTH and both fields are strings wrapped in single quotes
+The fields can be in multiple formats MM/DD/YYYY,  July 4th, 1991, and ***.
+Sometimes date field has whitespace following its year so those dates need to be trimmed.
+
+In order to improve data for analytics all dates will be transformed into shape X/X/YYYY (with day and month obscurred)
+When the patient's date of birth value is *** we remove the field in order to maintain data sanity.
+
+2. What are some limitations of your solution and how would you fix them?
+(3-5 sentences)
+
+Some of the limitations of my solution are that log file only represents a subset of potential date formats and field names.
+Additionally it can only process a single file at a time and is handling each line synchronously where it could be batched with order id and
+reordered after parallel processing.
+Furthermore date processing can be abstracted so that more data formates could be added easily in the future.
+Also this solution currently does not validate dates before obscuring them.
+(for example: if user inputs they are 200 years old it should be removed or flagged).
+Additionally detection for unmatched formats could be added and alerts sent to developers to add formats as future work.
+Finally I would standardize the field name to always be either DOB or DATE_OF_BIRTH for better analytics.
+
+
+3. What steps did you take to verify your solution works as intended?
+(3-5 sentences)
+
+Most testing was done through functional testing due to time constraints.
+Initial date of birth states were gained visually looking over the file
+Lines that matched those states were filtered to look over other lines and search for new states.
+Confirmed code is working for all known record states.
+
+Given more time proper unit tests would be implemented.
+
+
+4. How would you restructure your solution on a systems level to handle a
+high volume of very large log files, e.g. millions of lines? (short
+paragraph)
+
+This process can be batched on a line to line basis. I would run performance tests to see what size of batching is most efficient.
+If for example 100,000 lines was most performant each file would be batched into groups of 100,000.
+Each batch would have a record saved in a data store with FileId, OrderId, and JobStatus.
+Patient data would not be stored in the database.
+The batched lines would be sent to a queue where micro-services would be able to asynchonously process each portion,
+save the scrubbed lines to a data store or back into s3 bucket depending on memory available,
+and mark the JobStatus as done.
+
+Finally a cron job would keep a lookout for files that have had all batches completed, grab them from a datastore,
+order them by orderId and join them into as single file for storage in an s3 completed folder.
+
+
+
+5. Additionally, how would your testing process differ for a
+production-ready project? (short paragraph)
+
+Unit testing should be added validate known date of birth formates.
+Integration testing would pass multiple types of files to the system to insure that handles empty files or files of the wrong type cleanly.
+End to End testing would be added to ensure all pieces of the system are properly communicating and that performance is maintained.
